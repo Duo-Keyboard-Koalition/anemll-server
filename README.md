@@ -1,140 +1,82 @@
-# Anemll Server
+# anemll
 
-This is an OpenAI-compatible API server for [Anemll](https://github.com/Anemll/Anemll) models. It provides a `/v1/chat/completions` endpoint that follows the OpenAI API format. It also provides the `/v1/models` endpoint which allows it to work with Open WebUI.
+Run LLMs on Apple Neural Engine with an ollama-like CLI and OpenAI-compatible API.
 
-## Features
+## Requirements
 
-- OpenAI-compatible API
-- Streaming responses
-- System prompt, conversation history supported
-- Works with Open WebUI (other frontends not tested but should work aswell)
+- macOS with Apple Silicon (M1/M2/M3/M4)
+- Python 3.11 or 3.12 (`coremltools` does not support 3.13+)
+- Git LFS (`brew install git-lfs && git lfs install`)
 
-A version of `chat_full.py` (from the [swift-inference](https://github.com/Anemll/Anemll/blob/swift-inference/tests/chat_full.py) branch, which runs the fastest for me) is included for ease of use.
-
-## Installation
-
-1. Install the required dependencies, preferably in a conda or venv environment
-
+## Install
 
 ```bash
-pip install -r requirements.txt
+# Clone and install
+git clone git@github.com:Duo-Keyboard-Koalition/anemll-server.git
+cd anemll-server
+uv venv --python 3.12 .venv
+source .venv/bin/activate
+uv pip install -e .
 ```
 
-
-2. You will also need to download an Anemll model. I have used [this one](https://huggingface.co/anemll/anemll-Meta-Llama-3.2-1B-ctx2048_0.1.2) from the official Anemll Huggingface, 0.1.1 should also work fine.
-
-
-
-
-## Configuration
-
-
-Modify the `MODEL_DIR` variable in `server.py` to your Anemll model path. 
-
-
-```python
-# Hardcoded model directory path
-MODEL_DIR = "/example-path/anemll-Meta-Llama-3.2-1B-ctx2048_0.1.2"
-```
-
-## Usage
-
-Run the server with:
+## Quick Start
 
 ```bash
-python server.py
+# Download a model
+anemll pull anemll/anemll-Meta-Llama-3.2-1B-ctx2048_0.1.2
+
+# Interactive chat
+anemll run anemll-Meta-Llama-3.2-1B-ctx2048_0.1.2
+
+# Start OpenAI-compatible server
+anemll serve anemll-Meta-Llama-3.2-1B-ctx2048_0.1.2
 ```
 
-The server will start on `0.0.0.0:8000` by default.
+## Commands
 
-In order to connect Open WebUI to it, simply go to "Connections" in the settings and enter this as the base URL: `http://0.0.0.0:8000/v1`.
+| Command | Description |
+|---------|-------------|
+| `anemll pull <model>` | Download a model from HuggingFace |
+| `anemll list` | List downloaded models |
+| `anemll run <model>` | Interactive chat |
+| `anemll run <model> -p "prompt"` | Single prompt |
+| `anemll serve <model>` | Start API server (default: port 8000) |
+| `anemll rm <model>` | Remove a downloaded model |
 
-## Known issues, limitations
+## API
 
-Sometimes, but rarely, when you start the server you will get a GIL issue when you try to generate a response. Just restart the server and it will most likely work the next time you run it, and keep working from then on.
-
-
-## One last thing
-
-Anemll is still in its early stages, with a limited amount of models on Hugging Face and development of the core library still ongoing. This presents a unique opportunity to become an early contributor to this emerging technology. Whether you're interested in experimenting with the library, converting models, contributing code, or simply raising awareness - your involvement can help shape the future of on-device AI acceleration. The ANE represents a significant advancement in efficient ML inference, and community participation is vital to realizing its full potential.
-
-## API Endpoints
-
-### `/v1/chat/completions`
-
-This endpoint follows the OpenAI API format for chat completions.
-
-Example request:
-
-```json
-{
-  "model": "anemll-model",
-  "messages": [
-    {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "Hello, how are you?"}
-  ],
-  "temperature": 0.7,
-  "stream": true
-}
-```
-
-### `/v1/models`
-
-Lists available models. Needed to work with Open WebUI.
-
-
-## Testing with curl
-
-### Non-streaming request:
+The server exposes OpenAI-compatible endpoints:
 
 ```bash
-curl -X POST http://localhost:8000/v1/chat/completions \
+# Chat completion
+curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "anemll-model",
-    "messages": [
-      {"role": "system", "content": "Whatever you do, always reply in ALL CAPS!"},
-      {"role": "user", "content": "Hello, how are you?"}
-    ],
-    "temperature": 0.7,
-    "stream": false
-  }'
-```
-
-### Streaming request:
-
-```bash
-curl -X POST http://localhost:8000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "anemll-model",
-    "messages": [
-      {"role": "system", "content": "Whatever you do, always reply in ALL CAPS!"},
-      {"role": "user", "content": "Hello, how are you?"}
-    ],
-    "temperature": 0.7,
+    "messages": [{"role": "user", "content": "Hello!"}],
     "stream": true
   }'
-```
 
-### List models:
-
-```bash
+# List models
 curl http://localhost:8000/v1/models
 ```
 
+Use `http://localhost:8000/v1` as the base URL in Open WebUI or any OpenAI-compatible client.
 
-## Links
+## Available Models
 
-Unofficial Discord server for Anemll:
+Browse models at [huggingface.co/anemll](https://huggingface.co/anemll):
 
-https://discord.gg/xgtQDDBGcM
+```bash
+anemll pull anemll/anemll-Meta-Llama-3.2-1B-ctx2048_0.1.2
+anemll pull anemll/anemll-google-gemma-3-4b-it-qat-int4-unquantized-ctx4096_0.3.5
+```
 
+## Known Issues
 
-If you're interested in a general AI system performing any kind of digital labour for you, visit: 
-
-https://planetarylabour.com
+- Occasional GIL issue on first inference after startup (the warmup phase mitigates this).
+- `coremltools` may warn about untested Torch versions. Safe to ignore.
 
 ## License
 
-MIT - Do whatever you want with this.
+MIT
